@@ -218,12 +218,20 @@ function App() {
   };
 
   return (
-    <div style={{
-      background: "#0b0f0c",
-      minHeight: "100vh",
-      color: "#e5e7eb",
-      fontFamily: "Arial"
-    }}>
+    <div key={index} style={{
+  background: "#111714",
+  borderRadius: "16px",
+  padding: "20px",
+  border: "1px solid #1f2937",
+  transition: "0.2s"
+}}>
+  <div style={{
+  height: "4px",
+  width: "100%",
+  borderRadius: "10px",
+  background: "#22c55e",
+  marginBottom: "12px"
+}} />
 
       {/* HEADER */}
       <div style={{
@@ -309,12 +317,16 @@ function App() {
                     : "Loading..."
                 }</p>
 
-                <p><b>Deposited:</b> {
-                  positions[vault.address]
-                    ? Number(positions[vault.address].assets) / (10 ** decimals)
-                    : 0
-                }</p>
+                <p style={{ color: "#6b7280", fontSize: "12px" }}>
+  Deposited
+</p>
 
+<p style={{ fontSize: "20px", fontWeight: "bold" }}>
+  {positions[vault.address]
+    ? Number(positions[vault.address].assets) /
+      (10 ** vault.underlying.decimals)
+    : 0}
+</p>
                 <input
                   placeholder={`Amount (${symbol})`}
                   value={amounts[index] || ""}
@@ -328,16 +340,25 @@ function App() {
                 />
 
                 <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                  <button onClick={() => deposit(vault, index)}
-                    style={{ flex: 1, background: "#22c55e", padding: "10px" }}>
-                    Deposit
-                  </button>
-
-                  <button onClick={() => withdraw(vault)}
-                    style={{ flex: 1, background: "#ef4444", padding: "10px" }}>
-                    Withdraw
-                  </button>
+                  <button
+  onClick={() => deposit(vault, index)}
+  style={{
+    flex: 1,
+    padding: "10px",
+    background: "#22c55e",
+    borderRadius: "999px",
+    fontWeight: "bold",
+    border: "none",
+    cursor: "pointer"
+  }}
+  
+>
+  Deposit
+</button>
                 </div>
+                <p style={{ color: "#6b7280", fontSize: "12px", marginTop: "8px" }}>
+  Yield is generated automatically by the vault
+</p>
 
               </div>
             );
