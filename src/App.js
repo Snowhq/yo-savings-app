@@ -17,19 +17,29 @@ function App() {
   const [amounts, setAmounts] = useState({});
   const [vaultStates, setVaultStates] = useState({});
 
-  // TOKEN LOGOS
+  // ✅ FIXED TOKEN LOGO HANDLER
   const getTokenLogo = (symbol) => {
-    const logos = {
-      USDC: "https://cryptologos.cc/logos/usd-coin-usdc-logo.png",
-      ETH: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-      WETH: "https://cryptologos.cc/logos/ethereum-eth-logo.png",
-      BTC: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
-      cbBTC: "https://cryptologos.cc/logos/bitcoin-btc-logo.png",
-      EURC: "https://cryptologos.cc/logos/euro-eur-logo.png",
-      USDT: "https://cryptologos.cc/logos/tether-usdt-logo.png",
-      XAUt: "https://cryptologos.cc/logos/tether-gold-xaut-logo.png"
-    };
-    return logos[symbol] || "https://via.placeholder.com/40";
+    const clean = symbol.toUpperCase();
+
+    if (clean.includes("USDC"))
+      return "https://cryptologos.cc/logos/usd-coin-usdc-logo.png";
+
+    if (clean.includes("ETH"))
+      return "https://cryptologos.cc/logos/ethereum-eth-logo.png";
+
+    if (clean.includes("BTC"))
+      return "https://cryptologos.cc/logos/bitcoin-btc-logo.png";
+
+    if (clean.includes("USDT"))
+      return "https://cryptologos.cc/logos/tether-usdt-logo.png";
+
+    if (clean.includes("EUR"))
+      return "https://cryptologos.cc/logos/euro-eur-logo.png";
+
+    if (clean.includes("XAU"))
+      return "https://cryptologos.cc/logos/tether-gold-xaut-logo.png";
+
+    return "https://via.placeholder.com/40";
   };
 
   // SAFE CALL
@@ -41,7 +51,7 @@ function App() {
     }
   };
 
-  // LOAD DATA
+  // LOAD ALL DATA
   const loadAll = async (yoClient, account, vaultList) => {
     const newBalances = {};
     const newPositions = {};
@@ -50,13 +60,13 @@ function App() {
     for (let v of vaultList) {
       const token = v?.underlying?.address?.[8453];
 
-      const balanceRes = await safeCall(() =>
+      const bal = await safeCall(() =>
         yoClient.getTokenBalance(token, account)
       );
 
-      if (balanceRes) {
-        const { balance, decimals } = balanceRes;
-        newBalances[v.address] = Number(balance) / (10 ** decimals);
+      if (bal) {
+        newBalances[v.address] =
+          Number(bal.balance) / (10 ** bal.decimals);
       }
 
       const pos = await safeCall(() =>
@@ -146,7 +156,7 @@ function App() {
       alert("Deposit successful");
       await loadAll(yo, wallet, vaults);
 
-    } catch (e) {
+    } catch {
       alert("Deposit failed");
     }
   };
@@ -186,7 +196,8 @@ function App() {
     <div style={{
       background: "#0b0f0c",
       minHeight: "100vh",
-      color: "#e5e7eb"
+      color: "#e5e7eb",
+      fontFamily: "Arial"
     }}>
 
       {/* HEADER */}
@@ -197,16 +208,10 @@ function App() {
       }}>
         <h2>YO Savings</h2>
 
-        {wallet && (
-          <button onClick={() => setWallet(null)}>
-            Disconnect
-          </button>
-        )}
-
-        {!wallet && (
-          <button onClick={connectWallet}>
-            Connect Wallet
-          </button>
+        {wallet ? (
+          <button onClick={() => setWallet(null)}>Disconnect</button>
+        ) : (
+          <button onClick={connectWallet}>Connect Wallet</button>
         )}
       </div>
 
@@ -217,9 +222,7 @@ function App() {
           <p style={{ color: "#9ca3af" }}>
             Deposit and earn yield automatically.
           </p>
-          <button onClick={connectWallet}>
-            Get Started
-          </button>
+          <button onClick={connectWallet}>Get Started</button>
         </div>
       )}
 
@@ -232,7 +235,7 @@ function App() {
           padding: "30px"
         }}>
           {vaults.map((v, i) => {
-            const symbol = v.underlying.symbol.replace("yo", "");
+            const symbol = v.underlying.symbol;
             const decimals = v.underlying.decimals;
 
             return (
@@ -242,14 +245,20 @@ function App() {
                 borderRadius: "12px"
               }}>
 
-                <img
-                  src={getTokenLogo(symbol)}
-                  alt={symbol}
-                  style={{ width: "40px", marginBottom: "10px" }}
-                />
-
-                <h3>{v.name}</h3>
-                <p style={{ color: "#9ca3af" }}>{symbol}</p>
+                {/* ✅ LOGO + TITLE */}
+                <div style={{ display: "flex", gap: "10px", alignItems: "center" }}>
+                  <img
+                    src={getTokenLogo(symbol)}
+                    alt={symbol}
+                    style={{ width: "36px", height: "36px", borderRadius: "50%" }}
+                  />
+                  <div>
+                    <h3 style={{ margin: 0 }}>{v.name}</h3>
+                    <p style={{ margin: 0, color: "#9ca3af", fontSize: "13px" }}>
+                      {symbol}
+                    </p>
+                  </div>
+                </div>
 
                 <p>Wallet: {balances[v.address] || 0}</p>
 
@@ -269,15 +278,16 @@ function App() {
                   onChange={(e) => handleChange(i, e.target.value)}
                 />
 
-                <button onClick={() => deposit(v, i)}>Deposit</button>
-                <button onClick={() => withdraw(v)}>Withdraw</button>
+                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <button onClick={() => deposit(v, i)}>Deposit</button>
+                  <button onClick={() => withdraw(v)}>Withdraw</button>
+                </div>
 
               </div>
             );
           })}
         </div>
       )}
-
     </div>
   );
 }
