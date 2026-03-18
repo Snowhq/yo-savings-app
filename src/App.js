@@ -23,7 +23,7 @@ function App() {
       try {
         return await fn();
       } catch {
-        if (i === retries - 1) throw new Error("RPC failed");
+        if (i === retries - 1) return null;
         await new Promise(r => setTimeout(r, 300));
       }
     }
@@ -34,15 +34,13 @@ function App() {
     const newPositions = {};
 
     for (let v of vaultList) {
-      try {
-        const pos = await safeCall(() =>
-          yoClient.getUserPosition(v.address, account)
-        );
+      const pos = await safeCall(() =>
+        yoClient.getUserPosition(v.address, account)
+      );
 
-        newPositions[v.address] = {
-          assets: pos?.assets || 0n,
-        };
-      } catch {}
+      newPositions[v.address] = {
+        assets: pos?.assets || 0n,
+      };
     }
 
     setPositions(newPositions);
@@ -56,33 +54,38 @@ function App() {
       const token = v?.underlying?.address?.[8453];
       if (!token) continue;
 
-      try {
-        const { balance, decimals } = await safeCall(() =>
-          yoClient.getTokenBalance(token, account)
-        );
+      const result = await safeCall(() =>
+        yoClient.getTokenBalance(token, account)
+      );
 
-        newBalances[v.address] =
-          Number(balance) / (10 ** decimals);
-      } catch {}
+      if (!result) continue;
+
+      const { balance, decimals } = result;
+
+      newBalances[v.address] =
+        Number(balance) / (10 ** decimals);
     }
 
     setBalances(newBalances);
   };
-const loadVaultStates = async (yoClient, vaultList) => {
-  const newStates = {};
 
-  for (let v of vaultList) {
-    try {
-      const state = await yoClient.getVaultState(v.address);
+  // LOAD VAULT STATES
+  const loadVaultStates = async (yoClient, vaultList) => {
+    const newStates = {};
 
-      newStates[v.address] = state;
-    } catch (err) {
-      console.log("Vault load failed", v.name);
+    for (let v of vaultList) {
+      const state = await safeCall(() =>
+        yoClient.getVaultState(v.address)
+      );
+
+      if (state) {
+        newStates[v.address] = state;
+      }
     }
-  }
 
-  setVaultStates(newStates);
-};
+    setVaultStates(newStates);
+  };
+
   // CONNECT
   const connectWallet = async () => {
     if (!window.ethereum) return alert("Install MetaMask");
@@ -161,7 +164,6 @@ const loadVaultStates = async (yoClient, vaultList) => {
         });
 
         await yo.waitForTransaction(hash);
-        await new Promise(r => setTimeout(r, 500));
       }
 
       alert("Deposit successful");
@@ -202,7 +204,6 @@ const loadVaultStates = async (yoClient, vaultList) => {
         });
 
         await yo.waitForTransaction(hash);
-        await new Promise(r => setTimeout(r, 500));
       }
 
       alert("Withdraw successful");
@@ -218,9 +219,9 @@ const loadVaultStates = async (yoClient, vaultList) => {
 
   return (
     <div style={{
-      background: "#0a0a0a",
+      background: "#0b0f0c",
       minHeight: "100vh",
-      color: "#fff",
+      color: "#e5e7eb",
       fontFamily: "Arial"
     }}>
 
@@ -229,17 +230,15 @@ const loadVaultStates = async (yoClient, vaultList) => {
         display: "flex",
         justifyContent: "space-between",
         padding: "20px 40px",
-        background: "#111",
-        borderBottom: "1px solid #222"
+        borderBottom: "1px solid #1f2937"
       }}>
-        <h2 style={{ color: "#faff00" }}>YO Smart Savings</h2>
+        <h2>YO Savings</h2>
 
         <button onClick={connectWallet}
           style={{
-            background: "#39ff14",
+            background: "#22c55e",
             padding: "10px 18px",
-            borderRadius: "10px",
-            fontWeight: "bold",
+            borderRadius: "8px",
             border: "none"
           }}>
           {wallet
@@ -248,114 +247,104 @@ const loadVaultStates = async (yoClient, vaultList) => {
         </button>
       </div>
 
-      <h1 style={{
-        textAlign: "center",
-        marginTop: "30px"
-      }}>
-        Earn Yield on Your Assets
-      </h1>
+      {/* HERO */}
+      {!wallet && (
+        <div style={{ textAlign: "center", marginTop: "100px" }}>
+          <h1 style={{ fontSize: "42px" }}>
+            Earn yield without the complexity
+          </h1>
 
-      {/* GRID */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
-        gap: "20px",
-        padding: "30px",
-        maxWidth: "1200px",
-        margin: "0 auto"
-      }}>
+          <p style={{ color: "#9ca3af", marginTop: "10px" }}>
+            Deposit your assets and let YO handle everything.
+          </p>
 
-        {vaults.map((vault, index) => {
-          const symbol = vault.underlying.symbol;
-          const decimals = vault.underlying.decimals;
-          const state = vaultStates[vault.address];
+          <button
+            onClick={connectWallet}
+            style={{
+              marginTop: "20px",
+              background: "#22c55e",
+              padding: "12px 24px",
+              borderRadius: "8px",
+              border: "none"
+            }}
+          >
+            Get Started
+          </button>
+        </div>
+      )}
 
-          return (
-            <div key={index}
-              style={{
-                background: "#111",
-                borderRadius: "16px",
-                padding: "20px",
-                border: "1px solid #1f1f1f"
-              }}>
+      {/* VAULTS */}
+      {wallet && (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+          gap: "20px",
+          padding: "30px",
+          maxWidth: "1200px",
+          margin: "0 auto"
+        }}>
 
-              <h3 style={{ color: "#faff00" }}>{vault.name}</h3>
+          {vaults.map((vault, index) => {
+            const symbol = vault.underlying.symbol;
+            const decimals = vault.underlying.decimals;
+            const state = vaultStates[vault.address];
 
-              <p>{symbol}</p>
-
-              <hr style={{ border: "0.5px solid #222" }} />
-
-              <p><b>Wallet:</b> {balances[vault.address] || 0}</p>
-              <p>
-  <b>TVL:</b>{" "}
-  {state
-    ? (Number(state.totalAssets) / (10 ** decimals)).toFixed(2)
-    : "Loading..."}{" "}
-  {symbol}
-</p>
-
-<p>
-  <b>APY:</b>{" "}
-  {state ? "Auto (Variable Yield)" : "Loading..."}
-</p>
-
-              <p><b>Deposited:</b> {
-                positions[vault.address]
-                  ? Number(positions[vault.address].assets) /
-                    (10 ** decimals)
-                  : 0
-              }</p>
-
-              <p><b>Withdrawable:</b> {
-                positions[vault.address]
-                  ? Number(positions[vault.address].assets) /
-                    (10 ** decimals)
-                  : 0
-              }</p>
-
-              <input
-                placeholder={`Enter ${symbol}`}
-                value={amounts[index] || ""}
-                onChange={(e) => handleChange(index, e.target.value)}
+            return (
+              <div key={index}
                 style={{
-                  width: "100%",
-                  padding: "10px",
-                  marginTop: "10px",
-                  borderRadius: "8px",
-                  background: "#000",
-                  color: "#fff",
-                  border: "1px solid #333"
-                }}
-              />
+                  background: "#111714",
+                  borderRadius: "16px",
+                  padding: "20px",
+                  border: "1px solid #1f2937"
+                }}>
 
-              <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
-                <button onClick={() => deposit(vault, index)}
-                  style={{
-                    flex: 1,
-                    padding: "10px",
-                    background: "#39ff14",
-                    borderRadius: "8px",
-                    fontWeight: "bold"
-                  }}>
-                  Deposit
-                </button>
+                <h3>{vault.name}</h3>
+                <p style={{ color: "#9ca3af" }}>{symbol}</p>
 
-                <button onClick={() => withdraw(vault)}
+                <p><b>Wallet:</b> {balances[vault.address] || 0}</p>
+
+                <p><b>TVL:</b> {
+                  state
+                    ? (Number(state.totalAssets) / (10 ** decimals)).toFixed(2)
+                    : "Loading..."
+                }</p>
+
+                <p><b>Deposited:</b> {
+                  positions[vault.address]
+                    ? Number(positions[vault.address].assets) / (10 ** decimals)
+                    : 0
+                }</p>
+
+                <input
+                  placeholder={`Amount (${symbol})`}
+                  value={amounts[index] || ""}
+                  onChange={(e) => handleChange(index, e.target.value)}
                   style={{
-                    flex: 1,
+                    width: "100%",
                     padding: "10px",
-                    background: "#ff4444",
-                    borderRadius: "8px",
-                    fontWeight: "bold"
-                  }}>
-                  Withdraw
-                </button>
+                    marginTop: "10px",
+                    borderRadius: "6px"
+                  }}
+                />
+
+                <div style={{ display: "flex", gap: "10px", marginTop: "10px" }}>
+                  <button onClick={() => deposit(vault, index)}
+                    style={{ flex: 1, background: "#22c55e", padding: "10px" }}>
+                    Deposit
+                  </button>
+
+                  <button onClick={() => withdraw(vault)}
+                    style={{ flex: 1, background: "#ef4444", padding: "10px" }}>
+                    Withdraw
+                  </button>
+                </div>
+
               </div>
+            );
+          })}
+        </div>
+      )}
 
-            </div>
-          );
-        })}
-      </div>
     </div>
   );
 }
