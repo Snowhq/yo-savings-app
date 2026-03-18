@@ -10,11 +10,15 @@
     "@yo-protocol/core": "^1.0.9",
     "@yo-protocol/react": "^1.0.6",
     "ethers": "^6.16.0",
-    "react": "^19.2.4",
-    "react-dom": "^19.2.4",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
     "react-scripts": "5.0.1",
+    "typescript": "4.9.5",
     "viem": "^2.47.5",
     "web-vitals": "^2.1.4"
+  },
+  "overrides": {
+    "typescript": "4.9.5"
   },
   "scripts": {
     "start": "react-scripts start",
