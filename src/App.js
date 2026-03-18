@@ -107,7 +107,7 @@ const loadVaultStates = async (yoClient, vaultList) => {
 
     const publicClient = createPublicClient({
       chain: base,
-      transport: http("https://mainnet.base.org"),
+      transport: http("https://base.publicnode.com"),
     });
 
     const yoClient = createYoClient({
